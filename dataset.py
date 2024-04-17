@@ -4,15 +4,17 @@ import torch
 from scipy.ndimage import zoom
 import SimpleITK as sitk
 
+
+# You can either choose between 2 CustomDataset classes for your own data structure
+
 class CustomDataset(Dataset):
-    def __init__(self, num_classes, image_paths, label_paths, img_size, image_ext='.npy', label_ext='.npy'):
+    def __init__(self, num_classes, image_paths, label_paths, img_size):
         '''
         Args:
-            image_paths: Image file paths.
-            label_paths: Label file paths.
-            image_ext (str): Image file extension.
-            label_ext (str): Label file extension.
             num_classes (int): Number of classes.
+            image_paths (str): Image file paths.
+            label_paths (str): Label file paths.
+            img_size    (int): Training image size
         
         Note:
             Make sure to process the data into this structures
@@ -33,8 +35,6 @@ class CustomDataset(Dataset):
         self.image_paths = image_paths
         self.label_paths = label_paths
         self.img_size = img_size
-        self.image_ext = image_ext
-        self.label_ext = label_ext
         self.length = len(image_paths)
         
     def __len__(self):
@@ -53,4 +53,47 @@ class CustomDataset(Dataset):
         for i in range(self.num_classes): 
             encoded_label[i][label == i] = 1
         
+        return image, encoded_label
+    
+    
+
+# This CustomDataset2 is used for Synapse dataset preprocessed by TransUNet authors
+
+class CustomDataset2(Dataset):
+    def __init__(self, num_classes, case_paths, img_size):
+        '''
+        Args:
+            num_classes (int): Number of classes.
+            case_path   (str): Case file paths (including image and label).
+            img_size    (int): Training image size
+        
+        Note:
+            Make sure to process the data into this structures
+            <dataset name>
+            ├── 0001_0001.npz
+            ├── 0001_0002.npz
+            ├── 0001_0003.npz
+            ├── ...   
+        '''
+        self.num_classes = num_classes
+        self.case_paths = case_paths
+        self.img_size = img_size
+        self.length = len(case_paths)
+        
+    def __len__(self):
+        return self.length
+    
+    def __getitem__(self, index):
+        data = np.load(self.case_paths[index])
+        image, label = data['image'], data['label']
+        
+        x, y = image.shape
+        if x != self.img_size and y != self.img_size:
+            image = zoom(image, (self.img_size / x, self.img_size / y), order=0)
+            label = zoom(label, (self.img_size / x, self.img_size / y), order=0)
+        
+        encoded_label = np.zeros( (self.num_classes, ) + label.shape)
+        for i in range(self.num_classes): 
+            encoded_label[i][label == i] = 1
+            
         return image, encoded_label
