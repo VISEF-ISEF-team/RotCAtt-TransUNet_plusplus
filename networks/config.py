@@ -6,7 +6,7 @@ def get_config():
     # Input
     config.num_classes = 8
     config.in_channels = 1
-    config.img_size    = 128
+    config.img_size    = 256
     config.p           = [16, 8, 4]
     config.decoder = 'UCT'
     
