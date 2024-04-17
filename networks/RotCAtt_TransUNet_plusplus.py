@@ -2,7 +2,6 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-import torch
 import torch.nn as nn
 
 # from config import get_config
@@ -14,7 +13,7 @@ from .recon import Reconstruction
 from .decoder_cup import DecoderCup
 from .uct_decoder import UCTDecoder
 
-class NestedTransUnetRot(nn.Module):
+class RotCAtt_TransUNet_plusplus(nn.Module):
     def __init__(self, config):
         super().__init__()
         self.config = config
@@ -43,9 +42,3 @@ class NestedTransUnetRot(nn.Module):
             self.decoder(o1, o2, o3, x4)
             y = self.decoder(o1, o2, o3, x4)
             return self.out(y)
-        
-# config = get_config()
-# input = torch.rand(3, 1, 128, 128).cuda()
-# model = NestedTransUnetRot(config).cuda()
-# output = model(input)
-# print(output.size())
