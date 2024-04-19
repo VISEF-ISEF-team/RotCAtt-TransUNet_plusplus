@@ -13,7 +13,7 @@ import torch
 from torch.utils.data import DataLoader
 import torch.optim as optim
 from torch.nn.modules.loss import CrossEntropyLoss
-from metrics import Dice, IOU
+from metrics import Dice, IOU, HD
 
 from networks.RotCAtt_TransUNet_plusplus import RotCAtt_TransUNet_plusplus
 from networks.config import get_config
@@ -27,11 +27,11 @@ def parse_args():
                         help='pretrained or not (default: False)')
     parser.add_argument('--epochs', default=300, type=int, metavar='N',
                         help='number of epochs for training')
-    parser.add_argument('--batch_size', default=12, type=int, metavar='N',
+    parser.add_argument('--batch_size', default=24, type=int, metavar='N',
                         help='mini-batch size')
     parser.add_argument('--seed', type=int, default=1234, help='random seed')
     parser.add_argument('--n_gpu', type=int, default=1, help='total gpu')
-    parser.add_argument('--num_workers', default=3, type=int)
+    parser.add_argument('--num_workers', default=0, type=int)
     parser.add_argument('--val_mode', default=True, type=str2bool)
     
     # Network
@@ -40,14 +40,14 @@ def parse_args():
                         help='input channels')
     parser.add_argument('--patch_size', default=16, type=int,
                         help='input patch size')
-    parser.add_argument('--num_classes', default=12, type=int,
+    parser.add_argument('--num_classes', default=8, type=int,
                         help='number of classes')
-    parser.add_argument('--img_size', default=512, type=int, 
+    parser.add_argument('--img_size', default=256, type=int, 
                         help='input image img_size')
     
     # Dataset
-    parser.add_argument('--dataset', default='VHSCDD', help='dataset name')
-    parser.add_argument('--ext', default='.npz', help='file extension')
+    parser.add_argument('--dataset', default='Imagechd', help='dataset name')
+    parser.add_argument('--ext', default='.npy', help='file extension')
     parser.add_argument('--range', default=None, type=int, help='dataset size')
     
      # Criterion
@@ -147,6 +147,8 @@ def load_network(config):
         model = RotCAtt_TransUNet_plusplus(config=model_config).cuda()
         return model
         
+def rlog(value):
+    return round(value, 3)
         
 def train(config):
     config_dict = vars(config)
@@ -156,8 +158,7 @@ def train(config):
     config.name = f"{config.dataset}_{config.network}_bs{config.batch_size}_ps{config.patch_size}_epo{config.epochs}_hw{config.img_size}"
     
     # Data loading
-    train_loader, val_loader = loading_2D_data2(config)
-
+    train_loader, val_loader = loading_2D_data(config)
 
     # Model
     print(f"=> Initialize model: {config.network}")
@@ -185,13 +186,15 @@ def train(config):
         ('Train dice loss', []),                                # 5
         ('Train iou score', []),                                # 6
         ('Train iou loss', []),                                 # 7
+        ('Train hausdorff', []),                                # 8
         
         ('Val loss', []),                                       # 8
         ('Val ce loss', []),                                    # 9
         ('Val dice score', []),                                 # 10
         ('Val dice loss', []),                                  # 11
         ('Val iou score', []),                                  # 12
-        ('Val iou loss', [])                                    # 13
+        ('Val iou loss', []),                                   # 13
+        ('Val hausdorff', []),                                  # 14
     ])
     
     if config.pretrained: 
@@ -213,23 +216,24 @@ def train(config):
     ce = CrossEntropyLoss()
     dice = Dice(config.num_classes)
     iou = IOU(config.num_classes)
+    hd = HD()
     
     # Training loop
     best_iou = 0
     best_dice_score = 0
     
-    fieldnames = ['CE Loss', 'Dice Score', 'Dice Loss', 'IoU Score', 'IoU Loss', 'Total Loss']
+    fieldnames = ['CE Loss', 'Dice Score', 'Dice Loss', 'IoU Score', 'IoU Loss', 'HausDorff Distance', 'Total Loss']
     iter_log_file = f'outputs/{config.name}/iter_log.csv'
     if not os.path.exists(iter_log_file): 
         write_csv(iter_log_file, fieldnames)
         
     for epoch in range(config.epochs):
         print(f"Epoch: {epoch+1}/{config.epochs}")
-        train_log = trainer(config, train_loader, optimizer, model, ce, dice, iou)
-        if config.val_mode: val_log = validate(val_loader, model, ce, dice, iou)
+        train_log = trainer(config, train_loader, optimizer, model, ce, dice, iou, hd)
+        if config.val_mode: val_log = validate(val_loader, model, ce, dice, iou, hd)
         
-        print(f"Train loss: {train_log['loss']} - Train ce loss: {train_log['ce_loss']} - Train dice score: {train_log['dice_score']} - Train dice loss: {train_log['dice_loss']} - Train iou Score: {train_log['iou_score']} - Train iou loss: {train_log['iou_loss']}")
-        if config.val_mode: print(f"Val loss: {val_log['loss']} - Val ce loss: {val_log['ce_loss']} - Val dice score: {val_log['dice_score']} - Val dice loss: {val_log['dice_loss']} - Val iou Score: {val_log['iou_score']} - Val iou loss: {val_log['iou_loss']}")
+        print(f"Train loss: {rlog(train_log['loss'])} - Train ce loss: {rlog(train_log['ce_loss'])} - \Train dice score: {rlog(train_log['dice_score'])} - Train dice loss: {rlog(train_log['dice_loss'])} - Train iou Score: {rlog(train_log['iou_score'])} - Train iou loss: {rlog(train_log['iou_loss'])} - Train hausdorff: {rlog(train_log['hausdorff'])}")
+        if config.val_mode: print(f"Val loss: {rlog(val_log['loss'])} - Val ce loss: {rlog(val_log['ce_loss'])} - Val dice score: {rlog(val_log['dice_score'])} - Val dice loss: {rlog(val_log['dice_loss'])} - Val iou Score: {rlog(val_log['iou_score'])} - Val iou loss: {rlog(val_log['iou_loss'])} - Val hausdorff: {rlog(val_log['hausdorff'])}")
         
         log['epoch'].append(epoch)
         log['lr'].append(config.base_lr)
@@ -240,6 +244,7 @@ def train(config):
         log['Train dice loss'].append(train_log['dice_loss'])
         log['Train iou score'].append(train_log['iou_score'])
         log['Train iou loss'].append(train_log['iou_loss']) 
+        log['Train hausdorff'].append(train_log['hausdorff']) 
         
         if config.val_mode:
             log['Val loss'].append(val_log['loss'])
@@ -248,6 +253,7 @@ def train(config):
             log['Val dice loss'].append(val_log['dice_loss'])
             log['Val iou score'].append(val_log['iou_score'])
             log['Val iou loss'].append(val_log['iou_loss'])
+            log['Val hausdorff'].append(val_log['hausdorff'])
             
         else:
             log['Val loss'].append(None)
@@ -256,6 +262,7 @@ def train(config):
             log['Val dice loss'].append(None)
             log['Val iou score'].append(None)
             log['Val iou loss'].append(None)
+            log['Val hausdorff'].append(None)
 
         
         pd.DataFrame(log).to_csv(f'outputs/{config.name}/epo_log.csv', index=False)

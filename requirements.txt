@@ -7,3 +7,4 @@ argparse
 pandas
 tqdm
 SimpleITK
+hausdorff

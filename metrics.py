@@ -4,6 +4,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from sklearn.utils.extmath import cartesian
+from hausdorff import hausdorff_distance
 
 __all__ = ['Dice loss', 'Cross entropy', 'Focal loss', 'Dice Iou Cross entropy', 'Binary dice loss']
 
@@ -116,7 +117,7 @@ class Dice(nn.Module):
     
     
 class WeightedHausdorffDistance(nn.Module):
-    def __init__(self, height, width, p=-9, return_2_terms=False, device=torch.device('cpu')):
+    def __init__(self, height, width, p=-9, return_2_terms=False, device=torch.device('cuda')):
         '''
         height         (int):  image height
         width          (int):  image width
@@ -236,3 +237,20 @@ class WeightedHausdorffDistance(nn.Module):
         else: res = terms_1.mean() + terms_2.mean()
         return res
     
+
+class HD(nn.Module):
+    def __init__(self):
+        super().__init__()
+        
+    def forward(self, logits, target):
+        _,logits = torch.max(logits, dim=1)
+        _,target = torch.max(target, dim=1)
+        
+        logits = logits.detach().cpu().numpy()
+        target = target.detach().cpu().numpy()
+        
+        hd = 0
+        for index in range(logits.shape[0]):
+            hd += hausdorff_distance(logits[index], target[index], distance='euclidean')
+        
+        return hd / logits.shape[0]
