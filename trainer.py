@@ -28,6 +28,9 @@ def trainer(config, train_loader, optimizer, model, ce, dice, iou):
         target = target.cuda()
         logits = model(input)
         
+        print(input.size(), target.size(), logits.size())
+        exit()
+        
         ce_loss = ce(logits, target)
         dice_score, dice_loss, class_dice_score, class_dice_loss = dice(logits, target)
         iou_score, class_iou = iou(logits, target)

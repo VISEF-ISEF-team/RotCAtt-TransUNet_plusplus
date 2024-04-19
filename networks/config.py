@@ -4,9 +4,9 @@ def get_config():
     config = ml_collections.ConfigDict()
     
     # Input
-    config.num_classes = 8
+    config.num_classes = 12
     config.in_channels = 1
-    config.img_size    = 256
+    config.img_size    = 512
     config.p           = [16, 8, 4]
     config.decoder = 'UCT'
     

@@ -2,10 +2,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-import torch
 import torch.nn as nn
-
-from config import get_config
 from .dense_feature_extraction import Dense
 from .linear_embedding import LinearEmbedding
 from .transformer import Transformer
@@ -40,7 +37,6 @@ class RotCAtt_TransUNet_plusplus(nn.Module):
         
         if self.config.decoder == 'UCT':
             o1, o2, o3 = self.reconstruct(f1, f2, f3)
-            print(o1.size(), o2.size(), o3.size())
             self.decoder(o1, o2, o3, x4)
             y = self.decoder(o1, o2, o3, x4)
             return self.out(y)
