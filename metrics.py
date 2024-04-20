@@ -99,7 +99,7 @@ class Dice(nn.Module):
 
     def forward(self, logits, target):
         assert logits.shape == target.shape, 'logits & Target shape do not match'
-        logits = F.softmax(logits, dim=1)
+        logits = F.sigmoid(logits)
         
         DICE, LOSS = 0.0, 0.0
         CLS_DICE, CLS_LOSS = [], []

@@ -25,13 +25,13 @@ def parse_args():
     parser.add_argument('--name', default=None, help='model name')
     parser.add_argument('--pretrained', default=False,
                         help='pretrained or not (default: False)')
-    parser.add_argument('--epochs', default=300, type=int, metavar='N',
+    parser.add_argument('--epochs', default=600, type=int, metavar='N',
                         help='number of epochs for training')
     parser.add_argument('--batch_size', default=24, type=int, metavar='N',
                         help='mini-batch size')
     parser.add_argument('--seed', type=int, default=1234, help='random seed')
     parser.add_argument('--n_gpu', type=int, default=1, help='total gpu')
-    parser.add_argument('--num_workers', default=0, type=int)
+    parser.add_argument('--num_workers', default=3, type=int)
     parser.add_argument('--val_mode', default=True, type=str2bool)
     
     # Network
@@ -40,13 +40,13 @@ def parse_args():
                         help='input channels')
     parser.add_argument('--patch_size', default=16, type=int,
                         help='input patch size')
-    parser.add_argument('--num_classes', default=8, type=int,
+    parser.add_argument('--num_classes', default=2, type=int,
                         help='number of classes')
-    parser.add_argument('--img_size', default=256, type=int, 
+    parser.add_argument('--img_size', default=128, type=int, 
                         help='input image img_size')
     
     # Dataset
-    parser.add_argument('--dataset', default='Imagechd', help='dataset name')
+    parser.add_argument('--dataset', default='Imagecas', help='dataset name')
     parser.add_argument('--ext', default='.npy', help='file extension')
     parser.add_argument('--range', default=None, type=int, help='dataset size')
     
@@ -54,7 +54,7 @@ def parse_args():
     parser.add_argument('--loss', default='Dice Iou Cross entropy')
     
     # Optimizer
-    parser.add_argument('--optimizer', default='SGD', choices=['Adam', 'SGD'],
+    parser.add_argument('--optimizer', default='Adam', choices=['Adam', 'SGD'],
                         help='optimizer: ' + ' | '.join(['Adam', 'SGD']) 
                         + 'default (Adam)')
     parser.add_argument('--base_lr', '--learning_rate', default=0.01, type=float,
@@ -87,8 +87,9 @@ def output_config(config):
         print(f'{key}: {config[key]}')
     print('-' * 20)   
     
-    
+
 def loading_2D_data2(config):
+    # follow TransUnet (only train + test, no validation)
     case_paths = glob(f'data/{config.dataset}/train/*.npz')
     if config.range != None: case_paths = case_paths[:config.range]
     ds = CustomDataset2(config.num_classes, case_paths, img_size=config.img_size)

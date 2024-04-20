@@ -8,3 +8,4 @@ pandas
 tqdm
 SimpleITK
 hausdorff
+numba
