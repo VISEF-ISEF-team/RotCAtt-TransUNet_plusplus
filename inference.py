@@ -122,8 +122,8 @@ class Inference:
     
 if __name__ == '__main__':
     config = parse_args()
-    infer = Inference(config, 21)
+    infer = Inference(config, 48)
     # infer.volume_convert()
     infer.prediction()
-    infer.metrics()
+    # infer.metrics()
     

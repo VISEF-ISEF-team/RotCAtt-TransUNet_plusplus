@@ -40,15 +40,15 @@ def parse_args():
                         help='input channels')
     parser.add_argument('--patch_size', default=16, type=int,
                         help='input patch size')
-    parser.add_argument('--num_classes', default=12, type=int,
+    parser.add_argument('--num_classes', default=8, type=int,
                         help='number of classes')
-    parser.add_argument('--img_size', default=256, type=int, 
+    parser.add_argument('--img_size', default=128, type=int,
                         help='input image img_size')
     
     # Dataset
     parser.add_argument('--dataset', default='VHSCDD', help='dataset name')
     parser.add_argument('--ext', default='.npy', help='file extension')
-    parser.add_argument('--range', default=None, type=int, help='dataset size')
+    parser.add_argument('--range', default=221, type=int, help='dataset size')
     
      # Criterion
     parser.add_argument('--loss', default='Dice Iou Cross entropy')
@@ -89,7 +89,7 @@ def output_config(config):
     
 
 def loading_2D_data2(config):
-    case_paths = glob(f'data/{config.dataset}/train/*.npz')
+    case_paths = glob(f'data/{config.dataset}/train5/*.npz')
     if config.range != None: case_paths = case_paths[:config.range]
     ds = CustomDataset2(config.num_classes, case_paths, img_size=config.img_size)
     ds_loader = DataLoader(
@@ -103,8 +103,8 @@ def loading_2D_data2(config):
     
 
 def loading_2D_data(config):
-    image_paths = glob(f"data/{config.dataset}/images/*{config.ext}")
-    label_paths = glob(f"data/{config.dataset}/labels/*{config.ext}")
+    image_paths = glob(f"data/{config.dataset}/images/*.npy")
+    label_paths = glob(f"data/{config.dataset}/labels/*.npy")
     
     if config.range != None: 
         image_paths = image_paths[:config.range]
@@ -160,7 +160,7 @@ def train(config):
     config.name = f"{config.dataset}_{config.network}_bs{config.batch_size}_ps{config.patch_size}_epo{config.epochs}_hw{config.img_size}"
     
     # Data loading
-    train_loader, val_loader = loading_2D_data2(config)
+    train_loader, val_loader = loading_2D_data(config)
 
     # Model
     print(f"=> Initialize model: {config.network}")

@@ -37,6 +37,5 @@ class RotCAtt_TransUNet_plusplus(nn.Module):
         
         if self.config.decoder == 'UCT':
             o1, o2, o3 = self.reconstruct(f1, f2, f3)
-            self.decoder(o1, o2, o3, x4)
             y = self.decoder(o1, o2, o3, x4)
             return self.out(y)
