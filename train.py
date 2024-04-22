@@ -40,13 +40,13 @@ def parse_args():
                         help='input channels')
     parser.add_argument('--patch_size', default=16, type=int,
                         help='input patch size')
-    parser.add_argument('--num_classes', default=9, type=int,
+    parser.add_argument('--num_classes', default=12, type=int,
                         help='number of classes')
     parser.add_argument('--img_size', default=256, type=int,
                         help='input image img_size')
     
     # Dataset
-    parser.add_argument('--dataset', default='Synapse', help='dataset name')
+    parser.add_argument('--dataset', default='VHSCDD', help='dataset name')
     parser.add_argument('--ext', default='.npy', help='file extension')
     parser.add_argument('--range', default=None, type=int, help='dataset size')
     
@@ -54,7 +54,7 @@ def parse_args():
     parser.add_argument('--loss', default='Dice Iou Cross entropy')
     
     # Optimizer
-    parser.add_argument('--optimizer', default='Adam', choices=['Adam', 'SGD'],
+    parser.add_argument('--optimizer', default='SGD', choices=['Adam', 'SGD'],
                         help='optimizer: ' + ' | '.join(['Adam', 'SGD']) 
                         + 'default (Adam)')
     parser.add_argument('--base_lr', '--learning_rate', default=0.01, type=float,
