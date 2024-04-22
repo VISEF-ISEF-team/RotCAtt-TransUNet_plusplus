@@ -3,11 +3,11 @@ import os
 from glob import glob
 import pandas as pd
 import yaml
-from utils import str2bool
+from utils import str2bool, write_csv
 from collections import OrderedDict
 from sklearn.model_selection import train_test_split
 
-from trainer import trainer, validate, write_csv
+from trainer import trainer, validate
 from dataset import CustomDataset, CustomDataset2
 import torch
 from torch.utils.data import DataLoader
@@ -27,12 +27,12 @@ def parse_args():
                         help='pretrained or not (default: False)')
     parser.add_argument('--epochs', default=600, type=int, metavar='N',
                         help='number of epochs for training')
-    parser.add_argument('--batch_size', default=24, type=int, metavar='N',
+    parser.add_argument('--batch_size', default=12, type=int, metavar='N',
                         help='mini-batch size')
     parser.add_argument('--seed', type=int, default=1234, help='random seed')
     parser.add_argument('--n_gpu', type=int, default=1, help='total gpu')
-    parser.add_argument('--num_workers', default=3, type=int)
-    parser.add_argument('--val_mode', default=True, type=str2bool)
+    parser.add_argument('--num_workers', default=0, type=int)
+    parser.add_argument('--val_mode', default=False, type=str2bool)
     
     # Network
     parser.add_argument('--network', default='RotCAtt_TransUNet_plusplus') 
@@ -40,13 +40,13 @@ def parse_args():
                         help='input channels')
     parser.add_argument('--patch_size', default=16, type=int,
                         help='input patch size')
-    parser.add_argument('--num_classes', default=2, type=int,
+    parser.add_argument('--num_classes', default=12, type=int,
                         help='number of classes')
-    parser.add_argument('--img_size', default=128, type=int, 
+    parser.add_argument('--img_size', default=256, type=int, 
                         help='input image img_size')
     
     # Dataset
-    parser.add_argument('--dataset', default='Imagecas', help='dataset name')
+    parser.add_argument('--dataset', default='VHSCDD', help='dataset name')
     parser.add_argument('--ext', default='.npy', help='file extension')
     parser.add_argument('--range', default=None, type=int, help='dataset size')
     
@@ -89,7 +89,6 @@ def output_config(config):
     
 
 def loading_2D_data2(config):
-    # follow TransUnet (only train + test, no validation)
     case_paths = glob(f'data/{config.dataset}/train/*.npz')
     if config.range != None: case_paths = case_paths[:config.range]
     ds = CustomDataset2(config.num_classes, case_paths, img_size=config.img_size)
@@ -145,6 +144,8 @@ def load_pretrained_model(model_path):
 def load_network(config):
     if config.network == 'RotCAtt_TransUNet_plusplus':
         model_config = get_config()
+        model_config.img_size = config.img_size
+        model_config.num_classes = config.num_classes
         model = RotCAtt_TransUNet_plusplus(config=model_config).cuda()
         return model
         
@@ -159,7 +160,7 @@ def train(config):
     config.name = f"{config.dataset}_{config.network}_bs{config.batch_size}_ps{config.patch_size}_epo{config.epochs}_hw{config.img_size}"
     
     # Data loading
-    train_loader, val_loader = loading_2D_data(config)
+    train_loader, val_loader = loading_2D_data2(config)
 
     # Model
     print(f"=> Initialize model: {config.network}")

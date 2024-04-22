@@ -2,14 +2,8 @@ import torch
 import torch.nn as nn
 from collections import OrderedDict
 from tqdm import tqdm
-import csv
+from utils import write_csv
 import sys
-
-def write_csv(path, data):
-    with open(path, mode='a', newline='') as file:
-        iteration = csv.writer(file)
-        iteration.writerow(data)
-    file.close()
 
 def trainer(config, train_loader, optimizer, model, ce, dice, iou, hd):        
     model.train()
@@ -18,7 +12,6 @@ def trainer(config, train_loader, optimizer, model, ce, dice, iou, hd):
     
     total_ce_loss, total_dice_score, total_dice_loss, \
     total_iou_score, total_iou_loss, total_loss, total_hausdorff = 0,0,0,0,0,0,0
-    best_iou = 0
     
     for iter, (input, target) in tqdm(enumerate(train_loader)):
         sys.stdout.write(f"\riter: {iter+1}/{steps}")
@@ -55,10 +48,6 @@ def trainer(config, train_loader, optimizer, model, ce, dice, iou, hd):
         write_csv(f'outputs/{config.name}/ds_class_iter.csv', class_dice_score)
         write_csv(f'outputs/{config.name}/dl_loss_iter.csv', class_dice_loss)
         write_csv(f'outputs/{config.name}/iou_class_iter.csv', class_iou)
-                                        
-        if (iou_score > best_iou):
-            best_iou = iou_score
-            torch.save(model, f"outputs/{config.name}/model.pth")
                                         
         optimizer.zero_grad()
         loss.backward()

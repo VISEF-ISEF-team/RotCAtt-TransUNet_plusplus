@@ -90,16 +90,17 @@ class Dice(nn.Module):
         list: dice score for each classes
         listL dice loss for each classes
     '''
-    def __init__(self, num_classes, weight=None, ignore_index=[0]):
+    def __init__(self, num_classes, weight=None, softmax=True, ignore_index=[0]):
         super(Dice, self).__init__()
         self.num_classes = num_classes
         self.weight = weight
+        self.softmax = softmax
         self.ignore_index = ignore_index
         self.binary_dice = BinaryDice()
 
     def forward(self, logits, target):
         assert logits.shape == target.shape, 'logits & Target shape do not match'
-        logits = F.sigmoid(logits)
+        if self.softmax: logits = F.softmax(logits, dim=1)
         
         DICE, LOSS = 0.0, 0.0
         CLS_DICE, CLS_LOSS = [], []

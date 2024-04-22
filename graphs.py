@@ -1,91 +1,91 @@
-import argparse
-import yaml
+import plotly.express as px
 import matplotlib.pyplot as plt
 import pandas as pd
 from skimage.transform import resize as skires
+from utils import parse_args
 
-def visualize(epochs, scores, legends, x_label, y_label, title, config):
-    colors = ['red', 'blue', 'green', 'purple', 'orange', 'cyan'] 
-    for score, legend, color in zip(scores, legends, colors):
-        plt.plot(epochs, score, color, label=legend)
-        
-    plt.title(title)
-    plt.xlabel(x_label)
-    plt.ylabel(y_label)
-    plt.legend()
-    plt.savefig(f"outputs/{config['name']}/graphs/graph3.jpeg")
-    plt.show()
-
-def parse_args():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--name', default=None, help='model name')
-    return parser.parse_args()
-
-def read_data(type):
-    # open file
-    args = parse_args()
-    with open(f'outputs/{args.name}/config.yml', 'r') as f:
-        config = yaml.load(f, Loader=yaml.FullLoader)
+class Graphs:
+    def __init__(self):
+        self.config = parse_args()   
     
-    # load data
-    df = pd.read_csv(f"outputs/{config['name']}/{type}.csv")
-    fields = df.columns.tolist()  
-    metrics = []
-    for column in df.columns:
-        metrics.append(df[column].tolist())
+    def visualize(self, epochs, scores, legends, x_label, y_label, title):
+        colors = ['red', 'blue', 'green', 'purple', 'orange', 'cyan'] 
+        for score, legend, color in zip(scores, legends, colors):
+            plt.plot(epochs, score, color, label=legend)
         
-    return df, fields, metrics, config
+        plt.legend(loc='upper right')    
+        plt.title(title)
+        plt.xlabel(x_label)
+        plt.ylabel(y_label)
+        plt.legend()
+        # plt.savefig(f"outputs/{self.config}/graphs/graph3.jpeg")
+        plt.show()
 
-def plotting():
-    _, fields, metrics, config = read_data(type='epo_log')
-        
-    # mapping
-    options = {
-        'epoch': 0,
-        'lr': 1,
-        
-        'Train loss': 2,
-        'Train ce loss': 3,
-        'Train dice score': 4,
-        'Train dice loss': 5,
-        'Train iou score': 6,
-        'Train iou loss': 7,
-        'Train hausdorff': 8,
-        
-        'Val loss': 9,
-        'Val ce loss': 10,
-        'Val dice score': 11,
-        'Val dice loss': 12,
-        'Val iou score': 13,
-        'Val iou loss': 14,
-        'Val hausdorff': 15,
-    }
-        
-    iters = [i for i in range(1, (len(metrics[0])) + 1)]
-    visualize(
-        iters, 
-        [metrics[options['Train ce loss']], 
-         metrics[options['Val ce loss']]  ],  
-        
-        [fields[options['Train ce loss']], 
-         fields[options['Val ce loss']]  ],
-        
-        'Epochs', 'Scores', 'Training results', 
-        config
-    )
+    def read_data(self, type):
+        df = pd.read_csv(f"outputs/{self.config.name}/{type}.csv")
+        fields = df.columns.tolist()  
+        metrics = []
+        for column in df.columns:
+            metrics.append(df[column].tolist())
+            
+        return df, fields, metrics
+
+    def training_plotting(self):
+        _, fields, metrics = self.read_data(type='epo_log')
+            
+        # mapping
+        options = {
+            'epoch': 0,
+            'lr': 1,
+            
+            'Train loss': 2,
+            'Train ce loss': 3,
+            'Train dice score': 4,
+            'Train dice loss': 5,
+            'Train iou score': 6,
+            'Train iou loss': 7,
+            'Train hausdorff': 8,
+            
+            'Val loss': 9,
+            'Val ce loss': 10,
+            'Val dice score': 11,
+            'Val dice loss': 12,
+            'Val iou score': 13,
+            'Val iou loss': 14,
+            'Val hausdorff': 15,
+        }
+            
+        iters = [i for i in range(1, (len(metrics[0])) + 1)]
+        self.visualize(
+            iters, 
+            [metrics[options['Train ce loss']], 
+            metrics[options['Val ce loss']]  ],  
+            
+            [fields[options['Train ce loss']], 
+            fields[options['Val ce loss']]  ],
+            
+            'Epochs', 'Scores', 'Training results', 
+        )
     
-# Only use for testing 
-def boxplot():
-    df, _, _, config = read_data(type='ds_class_iter_test')
+    # Only use for testing 
+    def boxplot(self):
+        df_dice = pd.read_csv(f"outputs/{self.config.name}/infer_dice_class.csv")
+        df_iou  = pd.read_csv(f"outputs/{self.config.name}/infer_iou_class.csv")
+        
+        df_dice['type'] = 'dice'
+        df_iou['type'] = 'iou'
 
-    # Plotting
-    plt.figure(figsize=(10, 6))
-    df.boxplot(grid=False) 
-    plt.title(f'Boxplot of Dice Score Coefficient per class')
-    plt.xlabel('Classes')
-    plt.ylabel('Metric Value')
-    plt.xticks(rotation=45)
-    plt.tight_layout()
-    plt.show()    
+        df_combined = pd.concat([df_dice, df_iou])
+        df_combined.reset_index(drop=True, inplace=True)
+        df_final = pd.melt(df_combined, id_vars=['type'], var_name='class', value_name='score')
+        df_final.sort_values(['type', 'class'], inplace=True)
+        df_final.reset_index(drop=True, inplace=True)
 
-boxplot()
+        fig = px.box(df_final, x="class", y="score", color="type")
+        fig.update_traces(quartilemethod="exclusive")
+        fig.update_layout(width=700, height=700)
+        fig.show()
+
+if __name__ == '__main__':
+    graph = Graphs()
+    graph.boxplot()
