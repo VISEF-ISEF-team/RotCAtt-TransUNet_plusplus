@@ -8,5 +8,6 @@ pandas
 tqdm
 SimpleITK
 hausdorff
+nibabel
 numba
-reconstruction
+scikit-image

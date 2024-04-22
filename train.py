@@ -32,7 +32,7 @@ def parse_args():
     parser.add_argument('--seed', type=int, default=1234, help='random seed')
     parser.add_argument('--n_gpu', type=int, default=1, help='total gpu')
     parser.add_argument('--num_workers', default=0, type=int)
-    parser.add_argument('--val_mode', default=False, type=str2bool)
+    parser.add_argument('--val_mode', default=True, type=str2bool)
     
     # Network
     parser.add_argument('--network', default='RotCAtt_TransUNet_plusplus') 
@@ -42,7 +42,7 @@ def parse_args():
                         help='input patch size')
     parser.add_argument('--num_classes', default=12, type=int,
                         help='number of classes')
-    parser.add_argument('--img_size', default=256, type=int, 
+    parser.add_argument('--img_size', default=256, type=int,
                         help='input image img_size')
     
     # Dataset
@@ -54,7 +54,7 @@ def parse_args():
     parser.add_argument('--loss', default='Dice Iou Cross entropy')
     
     # Optimizer
-    parser.add_argument('--optimizer', default='Adam', choices=['Adam', 'SGD'],
+    parser.add_argument('--optimizer', default='SGD', choices=['Adam', 'SGD'],
                         help='optimizer: ' + ' | '.join(['Adam', 'SGD']) 
                         + 'default (Adam)')
     parser.add_argument('--base_lr', '--learning_rate', default=0.01, type=float,
@@ -86,25 +86,11 @@ def output_config(config):
     for key in config:
         print(f'{key}: {config[key]}')
     print('-' * 20)   
-    
-
-def loading_2D_data2(config):
-    case_paths = glob(f'data/{config.dataset}/train/*.npz')
-    if config.range != None: case_paths = case_paths[:config.range]
-    ds = CustomDataset2(config.num_classes, case_paths, img_size=config.img_size)
-    ds_loader = DataLoader(
-        ds, 
-        batch_size=config.batch_size,
-        shuffle=False,
-        num_workers=config.num_workers,
-        drop_last=False,
-    )
-    return ds_loader, None
-    
+   
 
 def loading_2D_data(config):
-    image_paths = glob(f"data/{config.dataset}/images/*{config.ext}")
-    label_paths = glob(f"data/{config.dataset}/labels/*{config.ext}")
+    image_paths = glob(f"data/{config.dataset}/images/*.npy")
+    label_paths = glob(f"data/{config.dataset}/labels/*.npy")
     
     if config.range != None: 
         image_paths = image_paths[:config.range]
@@ -160,7 +146,7 @@ def train(config):
     config.name = f"{config.dataset}_{config.network}_bs{config.batch_size}_ps{config.patch_size}_epo{config.epochs}_hw{config.img_size}"
     
     # Data loading
-    train_loader, val_loader = loading_2D_data2(config)
+    train_loader, val_loader = loading_2D_data(config)
 
     # Model
     print(f"=> Initialize model: {config.network}")

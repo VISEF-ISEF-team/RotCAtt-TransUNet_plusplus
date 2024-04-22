@@ -29,8 +29,8 @@ class Inference:
         self.index_slice = [30, 37, 70, 82, 110, 145]
         
     def volume_convert(self):
-        image_paths = glob(f'data/{self.dataset}/images/{self.id:04d}_*.npy')
-        label_paths = glob(f'data/{self.dataset}/labels/{self.id:04d}_*.npy')
+        image_paths = glob(f'data/{self.dataset}/images/*.npy')[960:960+192]
+        label_paths = glob(f'data/{self.dataset}/labels/*.npy')[960:960+192]
         image_vol = []
         label_vol = []
 
@@ -97,6 +97,7 @@ class Inference:
         pred = sitk.GetArrayFromImage(sitk.ReadImage(self.pred_path))
         
         for index in self.index_slice:
+            if index > image.shape[0]: continue
             self.visualize(image[index], f'{self.viz_file}/images/{self.id:04d}_{index+1:04d}.png')
             self.visualize(label[index], f'{self.viz_file}/labels/{self.id:04d}_{index+1:04d}.png', cmap='magma')
             self.visualize(pred[index],  f'{self.viz_file}/preds/{self.id:04d}_{index+1:04d}.png', cmap='magma')
@@ -104,8 +105,8 @@ class Inference:
         encoded_label = torch.tensor(self.encoding(label))
         encoded_pred = torch.tensor(self.encoding(pred))
         
-        dice = Dice(num_classes=self.num_classes, softmax=False)
-        iou = IOU(num_classes=self.num_classes)
+        dice = Dice(num_classes=self.num_classes, ignore_index=[], softmax=False)
+        iou = IOU(num_classes=self.num_classes, ignore_index=[])
         hd = HD()
         
         dice_score, _, cls_dice_score, _ = dice(encoded_pred, encoded_label)
@@ -122,8 +123,9 @@ class Inference:
     
 if __name__ == '__main__':
     config = parse_args()
-    infer = Inference(config, 21)
-    # infer.volume_convert()
-    infer.prediction()
-    infer.metrics()
+    for i in range(6, 7):
+        infer = Inference(config, i)
+        # infer.volume_convert()
+        infer.prediction()
+        infer.metrics()
     

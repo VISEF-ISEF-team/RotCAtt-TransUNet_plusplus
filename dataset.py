@@ -96,4 +96,4 @@ class CustomDataset2(Dataset):
         for i in range(self.num_classes): 
             encoded_label[i][label == i] = 1
             
-        return image, encoded_label
+        return torch.tensor(image).to(torch.float32), encoded_label

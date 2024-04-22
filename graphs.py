@@ -9,7 +9,7 @@ class Graphs:
         self.config = parse_args()   
     
     def visualize(self, epochs, scores, legends, x_label, y_label, title):
-        colors = ['red', 'blue', 'green', 'purple', 'orange', 'cyan'] 
+        colors = ['red', 'blue', 'green', 'purple', 'orange', 'black'] 
         for score, legend, color in zip(scores, legends, colors):
             plt.plot(epochs, score, color, label=legend)
         
@@ -18,7 +18,7 @@ class Graphs:
         plt.xlabel(x_label)
         plt.ylabel(y_label)
         plt.legend()
-        # plt.savefig(f"outputs/{self.config}/graphs/graph3.jpeg")
+        plt.savefig(f"outputs/{self.config.name}/graphs/graph2.jpeg")
         plt.show()
 
     def read_data(self, type):
@@ -56,13 +56,27 @@ class Graphs:
         }
             
         iters = [i for i in range(1, (len(metrics[0])) + 1)]
+        
+        train_hausdorff = metrics[options['Train hausdorff']]
+        train_hausdorff = [x / 100 for x in train_hausdorff]
+        
+        val_hausdorff = metrics[options['Val hausdorff']]
+        val_hausdorff = [x / 100 for x in val_hausdorff]
+        
+        
         self.visualize(
             iters, 
-            [metrics[options['Train ce loss']], 
-            metrics[options['Val ce loss']]  ],  
+            [
+            train_hausdorff, val_hausdorff,
+            metrics[options['Train ce loss']], metrics[options['Val ce loss']],
+            metrics[options['Train iou loss']], metrics[options['Val iou loss']] 
+            ],  
             
-            [fields[options['Train ce loss']], 
-            fields[options['Val ce loss']]  ],
+            [
+            fields[options['Train hausdorff']] + ' (/100)', fields[options['Val hausdorff']] + ' (/100)', 
+            fields[options['Train ce loss']], fields[options['Val ce loss']],
+            fields[options['Train iou loss']], fields[options['Val iou loss']] 
+            ],  
             
             'Epochs', 'Scores', 'Training results', 
         )
@@ -88,4 +102,4 @@ class Graphs:
 
 if __name__ == '__main__':
     graph = Graphs()
-    graph.boxplot()
+    graph.training_plotting()
