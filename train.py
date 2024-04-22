@@ -32,7 +32,7 @@ def parse_args():
     parser.add_argument('--seed', type=int, default=1234, help='random seed')
     parser.add_argument('--n_gpu', type=int, default=1, help='total gpu')
     parser.add_argument('--num_workers', default=0, type=int)
-    parser.add_argument('--val_mode', default=False, type=str2bool)
+    parser.add_argument('--val_mode', default=True, type=str2bool)
     
     # Network
     parser.add_argument('--network', default='RotCAtt_TransUNet_plusplus') 
@@ -40,15 +40,15 @@ def parse_args():
                         help='input channels')
     parser.add_argument('--patch_size', default=16, type=int,
                         help='input patch size')
-    parser.add_argument('--num_classes', default=8, type=int,
+    parser.add_argument('--num_classes', default=9, type=int,
                         help='number of classes')
-    parser.add_argument('--img_size', default=128, type=int,
+    parser.add_argument('--img_size', default=256, type=int,
                         help='input image img_size')
     
     # Dataset
-    parser.add_argument('--dataset', default='VHSCDD', help='dataset name')
+    parser.add_argument('--dataset', default='Synapse', help='dataset name')
     parser.add_argument('--ext', default='.npy', help='file extension')
-    parser.add_argument('--range', default=221, type=int, help='dataset size')
+    parser.add_argument('--range', default=None, type=int, help='dataset size')
     
      # Criterion
     parser.add_argument('--loss', default='Dice Iou Cross entropy')
@@ -86,21 +86,7 @@ def output_config(config):
     for key in config:
         print(f'{key}: {config[key]}')
     print('-' * 20)   
-    
-
-def loading_2D_data2(config):
-    case_paths = glob(f'data/{config.dataset}/train5/*.npz')
-    if config.range != None: case_paths = case_paths[:config.range]
-    ds = CustomDataset2(config.num_classes, case_paths, img_size=config.img_size)
-    ds_loader = DataLoader(
-        ds, 
-        batch_size=config.batch_size,
-        shuffle=False,
-        num_workers=config.num_workers,
-        drop_last=False,
-    )
-    return ds_loader, None
-    
+   
 
 def loading_2D_data(config):
     image_paths = glob(f"data/{config.dataset}/images/*.npy")
