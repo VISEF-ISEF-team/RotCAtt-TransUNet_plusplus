@@ -123,7 +123,7 @@ class Inference:
     
 if __name__ == '__main__':
     config = parse_args()
-    for i in range(12, 13):
+    for i in range(6, 7):
         infer = Inference(config, i)
         # infer.volume_convert()
         infer.prediction()
