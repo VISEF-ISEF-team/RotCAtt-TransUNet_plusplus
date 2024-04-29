@@ -1,9 +1,6 @@
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
-
-import torch
-
 import torch.nn as nn
 
 
@@ -42,9 +39,7 @@ class RotCAtt_TransUNet_plusplus_GradCam(nn.Module):
         f3 = enc3 + r3
 
         o1, o2, o3 = self.reconstruct(f1, f2, f3)
-
         y = self.decoder(o1, o2, o3, x4)
-
         return y
 
     def forward(self, x):

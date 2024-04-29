@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 from utils import parse_args, write_csv, save_vol, resize_vol
 
 import torch
+import torch.nn.functional as F
 from skimage.transform import resize as skires
 from metrics import Dice, IOU, HD
 from torch.nn.modules.loss import CrossEntropyLoss
@@ -46,6 +47,14 @@ class Inference:
         save_vol(image_vol, 'images', self.image_path)
         save_vol(label_vol, 'labels', self.label_path)
         
+    def save_vis(self, step, att_weights, rot_weights):
+        for scale in range(len(att_weights)):
+            for layer in range(len(att_weights[scale])):
+                np.save(f'outputs/{self.config.name}/vis/step{step}_att_weights_s{scale+1}_l{layer+1}.npy', att_weights[scale][layer])
+        
+        for rot in range(len(rot_weights)):
+            np.save(f'outputs/{self.config.name}/vis/step{step}_rot_weights_s{rot+1}.npy', rot_weights[rot])        
+        
     def prediction(self):
         model_path = f'outputs/{self.config.name}/model.pth'
         model = torch.load(model_path)
@@ -63,12 +72,16 @@ class Inference:
         model.eval()
         results = []
         start_t = time()
+        # threshold = 0.8
         with torch.no_grad():
             for i in range(0, image.shape[0], segment_size):
                 input = image[i:i+segment_size, :, :].unsqueeze(1).cuda()
-                logits = model(input)
+                logits, att_weights, rot_weights = model(input) 
+                logits = F.softmax(logits, dim=1)
+                self.save_vis(i+1, att_weights, rot_weights)
+                # logits[logits < threshold] = 0
                 
-                _, pred = torch.max(logits, dim=1)
+                _, pred = torch.max(logits, dim=1) 
                 results.append(pred)
                 pbar.update(1)
                 
@@ -123,9 +136,8 @@ class Inference:
     
 if __name__ == '__main__':
     config = parse_args()
-    for i in range(6, 7):
-        infer = Inference(config, i)
-        # infer.volume_convert()
-        infer.prediction()
-        infer.metrics()
+    infer = Inference(config, 1)
+    # infer.volume_convert()
+    infer.prediction()
+    # infer.metrics()
     

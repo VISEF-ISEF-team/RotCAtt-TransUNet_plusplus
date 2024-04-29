@@ -6,6 +6,7 @@ import math
 class MultiheadAttention(nn.Module):
     def __init__(self, config, level):
         super().__init__()
+        self.vis = config.vis
         self.n_heads = config.num_heads
         self.df = config.df[level]
         self.dk = config.dk[level]
@@ -38,11 +39,12 @@ class MultiheadAttention(nn.Module):
     
         S = torch.matmul(Q, K.transpose(-1, -2)) / math.sqrt(self.dh)
         A = self.softmax(S)
+        att_weights = A if self.vis else None
         A = self.attn_dropout(A)
 
         C = self._compose(torch.matmul(A, V))
         C = self.proj_dropout(C)
-        return C
+        return C, att_weights
         
     
 class MLP(nn.Module):
@@ -100,9 +102,13 @@ class TransLayer(nn.Module):
         emb3 = self.attn_norm3(emb3)      
         
         # Multihead attention + residual
-        emb1 = self.multihead_attention1(emb1) + h1
-        emb2 = self.multihead_attention2(emb2) + h2
-        emb3 = self.multihead_attention3(emb3) + h3
+        mha1, a1 = self.multihead_attention1(emb1)
+        mha2, a2 = self.multihead_attention2(emb2)
+        mha3, a3 = self.multihead_attention3(emb3)
+        
+        emb1 = mha1 + h1
+        emb2 = mha2 + h2
+        emb3 = mha3 + h3
         
         '''  Block 2 '''
         h1, h2, h3 = emb1, emb2, emb3
@@ -112,13 +118,14 @@ class TransLayer(nn.Module):
         emb2 = self.ffn2(self.ffn_norm2(emb2)) + h2
         emb3 = self.ffn3(self.ffn_norm3(emb3)) + h3
 
-        return emb1, emb2, emb3
+        return emb1, emb2, emb3, a1, a2, a3
         
 
 class Transformer(nn.Module):
     def __init__(self, config):
         super().__init__()
         df = config.df
+        self.vis = config.vis
         self.layers = nn.ModuleList()
         self.encoder_norm1 = nn.LayerNorm(df[0], eps=1e-6)
         self.encoder_norm2 = nn.LayerNorm(df[1], eps=1e-6)
@@ -129,11 +136,19 @@ class Transformer(nn.Module):
             self.layers.append(copy.deepcopy(layer))
         
     def forward(self, emb1, emb2, emb3):
+        att_weight_1 = []
+        att_weight_2 = []
+        att_weight_3 = []
+        
         for layer_block in self.layers:
-            emb1, emb2, emb3 = layer_block(emb1, emb2, emb3)
+            emb1, emb2, emb3, a1, a2, a3 = layer_block(emb1, emb2, emb3)
+            if self.vis: 
+                att_weight_1.append(a1)
+                att_weight_2.append(a2)
+                att_weight_3.append(a3)
             
         enc1 = self.encoder_norm1(emb1)
         enc2 = self.encoder_norm2(emb2) 
         enc3 = self.encoder_norm3(emb3) 
         
-        return enc1, enc2, enc3
+        return enc1, enc2, enc3, att_weight_1, att_weight_2, att_weight_3

@@ -68,7 +68,7 @@ class DenseBlock(nn.Module):
             r.append(self.attention_block(left, target, right))
         
         r = torch.stack(r, dim=0)
-        r = torch.mean(r,  dim=0)
+        r = torch.mean(r,  dim=0) 
         return r
     
 class RotatoryAttention(nn.Module):

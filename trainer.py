@@ -11,7 +11,7 @@ def trainer(config, train_loader, optimizer, model, ce, dice, iou, hd):
     pbar = tqdm(total=steps)
     
     total_ce_loss, total_dice_score, total_dice_loss, \
-    total_iou_score, total_iou_loss, total_loss, total_hausdorff = 0,0,0,0,0,0,0
+    total_iou_score, total_iou_loss, total_loss, total_hausdorff = 0.0,0.0,0.0,0.0,0.0,0.0,0.0
     
     for iter, (input, target) in tqdm(enumerate(train_loader)):
         sys.stdout.write(f"\riter: {iter+1}/{steps}")
@@ -19,7 +19,7 @@ def trainer(config, train_loader, optimizer, model, ce, dice, iou, hd):
         
         input = input.unsqueeze(1).cuda()
         target = target.cuda()
-        logits = model(input)
+        logits, _, _ = model(input)
         
         ce_loss = ce(logits, target)
         dice_score, dice_loss, class_dice_score, class_dice_loss = dice(logits, target)
@@ -71,13 +71,13 @@ def validate(val_loader, model, ce, dice, iou, hd):
     steps = len(val_loader)
     
     total_ce_loss, total_dice_score, total_dice_loss, \
-    total_iou_score, total_iou_loss, total_loss, total_hausdorff = 0,0,0,0,0,0,0
+    total_iou_score, total_iou_loss, total_loss, total_hausdorff = 0.0,0.0,0.0,0.0,0.0,0.0,0.0
     
     with torch.no_grad():
         for input, target in val_loader:
             input = input.unsqueeze(1).cuda()
             target = target.cuda()
-            logits = model(input)
+            logits, _, _ = model(input)
         
             ce_loss = ce(logits, target)
             dice_score, dice_loss, _, _ = dice(logits, target)

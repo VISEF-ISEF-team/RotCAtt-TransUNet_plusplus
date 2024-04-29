@@ -8,7 +8,6 @@ def get_config():
     config.in_channels = 1
     config.img_size    = 128
     config.p           = [16, 8, 4]
-    config.decoder = 'UCT'
     
     # Dense
     config.dense_filters = [1, 64, 128, 256]
@@ -21,7 +20,7 @@ def get_config():
     
     # Transformer
     config.num_heads = 4
-    config.num_layers = 3
+    config.num_layers = 10
     config.mlp_ratio = 4
     config.dropout_rate = 0.1
     
@@ -29,6 +28,6 @@ def get_config():
     config.head_channels = 512
     
     # Other
-    config.vis = False
+    config.vis = True
     
     return config

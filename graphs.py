@@ -67,15 +67,15 @@ class Graphs:
         self.visualize(
             iters, 
             [
-            train_hausdorff, val_hausdorff,
-            metrics[options['Train ce loss']], metrics[options['Val ce loss']],
-            metrics[options['Train iou loss']], metrics[options['Val iou loss']] 
+            metrics[options['Train dice score']], metrics[options['Val dice score']],
+            metrics[options['Train iou score']], metrics[options['Val iou score']],
+            metrics[options['Train loss']], metrics[options['Val loss']] 
             ],  
             
             [
-            fields[options['Train hausdorff']] + ' (/100)', fields[options['Val hausdorff']] + ' (/100)', 
-            fields[options['Train ce loss']], fields[options['Val ce loss']],
-            fields[options['Train iou loss']], fields[options['Val iou loss']] 
+            fields[options['Train dice score']] + ' (/100)', fields[options['Val dice score']] + ' (/100)', 
+            fields[options['Train iou score']], fields[options['Val iou score']],
+            fields[options['Train loss']], fields[options['Val loss']] 
             ],  
             
             'Epochs', 'Scores', 'Training results', 
