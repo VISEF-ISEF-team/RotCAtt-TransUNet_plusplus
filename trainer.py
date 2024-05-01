@@ -19,7 +19,7 @@ def trainer(config, train_loader, optimizer, model, ce, dice, iou, hd):
         
         input = input.unsqueeze(1).cuda()
         target = target.cuda()
-        logits, _, _ = model(input)
+        logits, _, _, _ = model(input)
         
         ce_loss = ce(logits, target)
         dice_score, dice_loss, class_dice_score, class_dice_loss = dice(logits, target)
@@ -66,7 +66,7 @@ def trainer(config, train_loader, optimizer, model, ce, dice, iou, hd):
     ])
     
     
-def validate(val_loader, model, ce, dice, iou, hd):
+def validate(config, val_loader, model, ce, dice, iou, hd):
     model.eval()
     steps = len(val_loader)
     
@@ -77,7 +77,7 @@ def validate(val_loader, model, ce, dice, iou, hd):
         for input, target in val_loader:
             input = input.unsqueeze(1).cuda()
             target = target.cuda()
-            logits, _, _ = model(input)
+            logits, _, _, _ = model(input)
         
             ce_loss = ce(logits, target)
             dice_score, dice_loss, _, _ = dice(logits, target)

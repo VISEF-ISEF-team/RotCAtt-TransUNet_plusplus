@@ -5,6 +5,7 @@ from time import time
 from tqdm import tqdm
 import os
 import matplotlib.pyplot as plt
+import pickle
 from utils import parse_args, write_csv, save_vol, resize_vol
 
 import torch
@@ -17,17 +18,51 @@ from torch.nn.modules.loss import CrossEntropyLoss
 class Inference:
     def __init__(self, config, id):
         self.config = config
+        self.network = config.network
+        self.name = config.name
         self.num_classes = config.num_classes
         self.dataset = config.dataset
+        if self.dataset == 'VHSCDD': self.dataset += f'_{self.img_size}'
+        self.batch_size = config.batch_size
+        self.num_heads = 4
         self.id = id
         self.image_path = f'data/{self.dataset}/test_images/{id:04d}.nii.gz'
         self.label_path = f'data/{self.dataset}/test_labels/{id:04d}.nii.gz'
         self.pred_path = f'data/{self.dataset}/test_pred/{id:04d}.nii.gz'
-        self.infer_log_file = f'outputs/{config.name}/inference_log.csv'
-        self.dice_class_file = f'outputs/{config.name}/infer_dice_class.csv'
-        self.iou_class_file = f'outputs/{config.name}/infer_iou_class.csv'
-        self.viz_file = f'outputs/{config.name}/test'
+        self.infer_log_file = f'outputs/{self.config.network}/{config.name}/inference_log.csv'
+        self.dice_class_file = f'outputs/{self.config.network}/{config.name}/infer_dice_class.csv'
+        self.iou_class_file = f'outputs/{self.config.network}/{config.name}/infer_iou_class.csv'
+        self.vis_path = f'outputs/{self.network}/{self.name}/test/{id}/'
         self.index_slice = [30, 37, 70, 82, 110, 145]
+        self.head_1, self.head_2, self.head_3, self.head_4 = [], [], [], []
+        
+        self.a_weights = {
+            'size_1': {
+                'head_1': [],
+                'head_2': [],
+                'head_3': [],
+                'head_4': [],
+            },
+            'size_2': {
+                'head_1': [],
+                'head_2': [],
+                'head_3': [],
+                'head_4': [],
+            },
+            'size_3': {
+                'head_1': [],
+                'head_2': [],
+                'head_3': [],
+                'head_4': [],
+            }
+        }
+        
+        self.c_weights = {
+            'size_1': [],
+            'size_2': [],
+            'size_3': [],
+        }
+        
         
     def volume_convert(self):
         image_paths = glob(f'data/{self.dataset}/images/*.npy')[960:960+192]
@@ -47,44 +82,58 @@ class Inference:
         save_vol(image_vol, 'images', self.image_path)
         save_vol(label_vol, 'labels', self.label_path)
         
-    def save_vis(self, step, att_weights, rot_weights):
-        for scale in range(len(att_weights)):
-            for layer in range(len(att_weights[scale])):
-                np.save(f'outputs/{self.config.name}/vis/step{step}_att_weights_s{scale+1}_l{layer+1}.npy', att_weights[scale][layer])
+    def save_vis(self, a_weights, r_weights, c_weights):
+        for s in range(len(a_weights)):
+            save_vol(r_weights[s].detach().cpu().numpy(), 'images', self.vis_path + f'r_size_{s+1}')
+            for l in range(len(a_weights[s])):
+                self.c_weights[f'size_{s+1}'].append(c_weights[s][l][2].detach().cpu().numpy())
+                for h in range(self.num_heads):    
+                    self.a_weights[f'size_{s+1}'][f'head_{h+1}'].append(a_weights[s][l][2,h,:,:].detach().cpu().numpy())                
         
-        for rot in range(len(rot_weights)):
-            np.save(f'outputs/{self.config.name}/vis/step{step}_rot_weights_s{rot+1}.npy', rot_weights[rot])        
         
     def prediction(self):
-        model_path = f'outputs/{self.config.name}/model.pth'
+        model_path = f'outputs/{self.config.network}/{self.config.name}/model.pth'
         model = torch.load(model_path)
         image = sitk.GetArrayFromImage(sitk.ReadImage(self.image_path, sitk.sitkFloat32))
         image = torch.from_numpy(image).to(torch.float32).cuda()
         
         # pipeline
-        segment_size = self.config.batch_size
+        segment_size = self.batch_size
         residual = image.shape[0] % segment_size
         if 1 <= residual and residual <= 3: segment_size -= 1
-        steps = int(image.shape[0] / segment_size) + 1
-        pbar = tqdm(total=steps)
+        steps = int(image.shape[0] / segment_size)
+        steps = steps + 1 if residual != 0 else steps
         
         # prediction
         model.eval()
         results = []
         start_t = time()
-        # threshold = 0.8
+        
+        start = 30
+        end = 31    # end = steps
+        pbar = tqdm(total=start-end)
+        
+        if not os.path.exists(self.vis_path): os.mkdir(self.vis_path)
         with torch.no_grad():
-            for i in range(0, image.shape[0], segment_size):
+            for i in range(segment_size*start, segment_size*end, segment_size):
                 input = image[i:i+segment_size, :, :].unsqueeze(1).cuda()
-                logits, att_weights, rot_weights = model(input) 
+                logits, a_weights, r_weights, c_weights = model(input)  
                 logits = F.softmax(logits, dim=1)
-                self.save_vis(i+1, att_weights, rot_weights)
-                # logits[logits < threshold] = 0
-                
+
+                self.save_vis(a_weights, r_weights, c_weights)
+
                 _, pred = torch.max(logits, dim=1) 
                 results.append(pred)
                 pbar.update(1)
                 
+            for s in range(len(a_weights)):
+                instance = self.c_weights[f'size_{s+1}']
+                save_vol(np.array(instance), 'images', self.vis_path + f'c_size_{s+1}.nii.gz')
+                for h in range(self.num_heads):
+                    instance = self.a_weights[f'size_{s+1}'][f'head_{h+1}']
+                    save_vol(np.array(instance), 'images', self.vis_path + f'a_size_{s+1}_head_{h+1}.nii.gz')    
+            
+            
         end_t = time()
         print(f'Prediction time: {end_t-start_t}')
         
@@ -137,7 +186,6 @@ class Inference:
 if __name__ == '__main__':
     config = parse_args()
     infer = Inference(config, 1)
-    # infer.volume_convert()
     infer.prediction()
     # infer.metrics()
     

@@ -1,3 +1,4 @@
 model.pth
 data
 *nii.gz
+__pycache__

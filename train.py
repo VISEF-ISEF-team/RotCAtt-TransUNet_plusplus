@@ -8,15 +8,44 @@ from collections import OrderedDict
 from sklearn.model_selection import train_test_split
 
 from trainer import trainer, validate
-from dataset import CustomDataset, CustomDataset2
+from dataset import CustomDataset
 import torch
 from torch.utils.data import DataLoader
 import torch.optim as optim
 from torch.nn.modules.loss import CrossEntropyLoss
 from metrics import Dice, IOU, HD
 
-from networks.RotCAtt_TransUNet_plusplus import RotCAtt_TransUNet_plusplus
-from networks.config import get_config
+# Network 1: RotCAtt_TransUNet_plusplus
+from networks.RotCAtt_TransUNet_plusplus.RotCAtt_TransUNet_plusplus import RotCAtt_TransUNet_plusplus
+from networks.RotCAtt_TransUNet_plusplus.config import get_config
+
+# Network 2: TransUNet
+from networks.TransUNet.TransUNet import TransUNet
+from networks.TransUNet.vit_configs import VIT_CONFIGS
+
+# Network 3: UNet_plusplus
+from networks.UNet_plusplus.UNet_plusplus import UNet_plusplus
+
+# Network 4: UNet
+from networks.UNet.UNet import UNet
+
+# Network 5: ResUNet
+from networks.ResUNet.ResUNet import ResUNet
+
+# Network 6: UNet_Attention 
+from networks.UNet_Attention.UNet_Attenttion import UNet_Attention
+
+# Network 7: UNet_plusplus_Attention
+from networks.UNet_plusplus_Attention.UNet_plusplus_Attention import UNet_plusplus_Attention
+
+# Network 8: SwinUnet
+from networks.SwinUnet.SwinUNet import SwinUNet
+from networks.SwinUNet.config import sample_config as swin_config
+
+# Network 9: SwinUNet Attention
+from networks.SwinUNet_Attention.SwinUNet_Attention import SwinUNet_Attention
+from networks.SwinUNet_Attention.configs import swin_attention_unet as swin_unet_att_config
+
 
 def parse_args():     
     
@@ -27,7 +56,7 @@ def parse_args():
                         help='pretrained or not (default: False)')
     parser.add_argument('--epochs', default=600, type=int, metavar='N',
                         help='number of epochs for training')
-    parser.add_argument('--batch_size', default=24, type=int, metavar='N',
+    parser.add_argument('--batch_size', default=6, type=int, metavar='N',
                         help='mini-batch size')
     parser.add_argument('--seed', type=int, default=1234, help='random seed')
     parser.add_argument('--n_gpu', type=int, default=1, help='total gpu')
@@ -42,11 +71,11 @@ def parse_args():
                         help='input patch size')
     parser.add_argument('--num_classes', default=12, type=int,
                         help='number of classes')
-    parser.add_argument('--img_size', default=256, type=int,
+    parser.add_argument('--img_size', default=512, type=int,
                         help='input image img_size')
     
     # Dataset
-    parser.add_argument('--dataset', default='VHSCDD_256', help='dataset name')
+    parser.add_argument('--dataset', default='VHSCDD', help='dataset name')
     parser.add_argument('--ext', default='.npy', help='file extension')
     parser.add_argument('--range', default=None, type=int, help='dataset size')
     
@@ -133,8 +162,40 @@ def load_network(config):
         model_config.img_size = config.img_size
         model_config.num_classes = config.num_classes
         model = RotCAtt_TransUNet_plusplus(config=model_config).cuda()
-        return model
         
+    elif config.network == 'TransUNet':
+        vit_config = VIT_CONFIGS['R50-ViT-B_16']
+        vit_config.n_classes = config.num_classes
+        vit_config.n_skip = 3
+        vit_config.patches.grid = (int(config.img_size / config.patch_size), int(config.img_size / config.patch_size))
+        model = TransUNet(config=vit_config, img_size=config.img_size, num_classes=config.num_classes).cuda()
+
+    elif config.network == 'UNet_plusplus':
+        model = UNet_plusplus(num_classes=config.num_classes).cuda()
+        
+    elif config.network == 'UNet':
+        model = UNet(num_classes=config.num_classes).cuda()
+        
+    elif config.network == 'ResUNet':
+        model = ResUNet(num_classes=config.num_classes).cuda()
+        
+    elif config.network == 'UNet_Attention':
+        model = UNet_Attention(num_classes=config.num_classes).cuda()
+        
+    elif config.network == 'UNet_plusplus_Attention':
+        model = UNet_plusplus_Attention(num_classes=config.num_classes).cuda()
+        
+    elif config.network == 'SwinUNet':
+        model_config = swin_config()
+        model = SwinUNet(config=model_config, img_size=224, num_classes=config.DATA.NUM_CLASSES).cuda()
+        
+    elif config.network == 'SwinUNet_Attention':
+        model_config = swin_unet_att_config.get_swin_unet_attention_configs().to_dict()
+        model = SwinUNet_Attention(model_config, num_classes=config.num_classes).cuda()
+            
+    return model
+
+ 
 def rlog(value):
     return round(value, 3)
         
@@ -144,9 +205,6 @@ def train(config):
     
     # Config name
     config.name = f"{config.dataset}_{config.network}_bs{config.batch_size}_ps{config.patch_size}_epo{config.epochs}_hw{config.img_size}"
-    
-    # Data loading
-    train_loader, val_loader = loading_2D_data(config)
 
     # Model
     print(f"=> Initialize model: {config.network}")
@@ -162,6 +220,9 @@ def train(config):
                 
     else: model = load_pretrained_model(f'outputs/{config.name}/model.pth')
     
+    # Data loading
+    if config.dataset == 'VHSCDD': config.dataset += f'_{config.img_size}'
+    train_loader, val_loader = loading_2D_data(config)
     
     # logging
     log = OrderedDict([
@@ -220,7 +281,7 @@ def train(config):
     for epoch in range(config.epochs):
         print(f"Epoch: {epoch+1}/{config.epochs}")
         train_log = trainer(config, train_loader, optimizer, model, ce, dice, iou, hd)
-        if config.val_mode: val_log = validate(val_loader, model, ce, dice, iou, hd)
+        if config.val_mode: val_log = validate(config, val_loader, model, ce, dice, iou, hd)
         
         print(f"Train loss: {rlog(train_log['loss'])} - Train ce loss: {rlog(train_log['ce_loss'])} - Train dice score: {rlog(train_log['dice_score'])} - Train dice loss: {rlog(train_log['dice_loss'])} - Train iou Score: {rlog(train_log['iou_score'])} - Train iou loss: {rlog(train_log['iou_loss'])} - Train hausdorff: {rlog(train_log['hausdorff'])}")
         if config.val_mode: print(f"Val loss: {rlog(val_log['loss'])} - Val ce loss: {rlog(val_log['ce_loss'])} - Val dice score: {rlog(val_log['dice_score'])} - Val dice loss: {rlog(val_log['dice_loss'])} - Val iou Score: {rlog(val_log['iou_score'])} - Val iou loss: {rlog(val_log['iou_loss'])} - Val hausdorff: {rlog(val_log['hausdorff'])}")

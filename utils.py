@@ -26,9 +26,10 @@ class DotDict:
     
 def parse_args():
     parser = argparse.ArgumentParser()
+    parser.add_argument('--network', default=None, help='architecture name')
     parser.add_argument('--name', default=None, help='model name')
     parser = parser.parse_args()
-    with open(f'outputs/{parser.name}/config.yml', 'r') as f:
+    with open(f'outputs/{parser.network}/{parser.name}/config.yml', 'r') as f:
         config = yaml.load(f, Loader=yaml.FullLoader)
     config = DotDict(config)
     return config

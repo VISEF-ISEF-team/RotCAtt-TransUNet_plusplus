@@ -58,7 +58,6 @@ class CustomDataset(Dataset):
     
 
 # This CustomDataset2 is used for Synapse dataset preprocessed by TransUNet authors
-
 class CustomDataset2(Dataset):
     def __init__(self, num_classes, case_paths, img_size):
         '''
