@@ -8,7 +8,7 @@ factor: 0.1
 gamma: 0.6666666666666666
 img_size: 256
 input_channels: 1
-loss: Dice Iou Cross entropy
+loss: Dice Iou
 milestones: 1,2
 min_lr: 1.0e-05
 momentum: 0.9

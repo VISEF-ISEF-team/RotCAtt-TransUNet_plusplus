@@ -13,7 +13,7 @@ milestones: 1,2
 min_lr: 1.0e-05
 momentum: 0.9
 n_gpu: 1
-name: MMWHS_RotCAtt_TransUNet_plusplus_bs24_ps16_epo300_hw256_ly4
+name: MMWHS_RotCAtt_TransUNet_plusplus_bs24_ps16_epo600_hw256_ly4
 nesterov: false
 network: RotCAtt_TransUNet_plusplus
 num_classes: 8

@@ -6,7 +6,9 @@ from utils import parse_args
 
 class Graphs:
     def __init__(self):
-        self.config = parse_args()   
+        self.config = parse_args()
+        self.network = self.config.network
+        self.name = self.config.name
     
     def visualize(self, epochs, scores, legends, x_label, y_label, title):
         colors = ['red', 'blue', 'green', 'purple', 'orange', 'black'] 
@@ -18,11 +20,12 @@ class Graphs:
         plt.xlabel(x_label)
         plt.ylabel(y_label)
         plt.legend()
-        plt.savefig(f"outputs/{self.config.name}/graphs/graph2.jpeg")
+        # plt.ylim(0.0, 1.0)
+        plt.savefig(f"outputs/{self.network}/{self.name}/graphs/graph2.jpeg")
         plt.show()
 
     def read_data(self, type):
-        df = pd.read_csv(f"outputs/{self.config.name}/{type}.csv")
+        df = pd.read_csv(f"outputs/{self.network}/{self.name}/{type}.csv")
         fields = df.columns.tolist()  
         metrics = []
         for column in df.columns:
@@ -67,16 +70,18 @@ class Graphs:
         self.visualize(
             iters, 
             [
-            metrics[options['Train dice score']], metrics[options['Val dice score']],
-            metrics[options['Train iou score']], metrics[options['Val iou score']],
-            metrics[options['Train loss']], metrics[options['Val loss']] 
+            train_hausdorff, val_hausdorff,
+            metrics[options['Train ce loss']], metrics[options['Val ce loss']],
+            metrics[options['Train iou loss']], metrics[options['Val iou loss']],
+            # metrics[options['Train loss']], metrics[options['Val loss']] 
             ],  
             
             [
-            fields[options['Train dice score']] + ' (/100)', fields[options['Val dice score']] + ' (/100)', 
-            fields[options['Train iou score']], fields[options['Val iou score']],
-            fields[options['Train loss']], fields[options['Val loss']] 
-            ],  
+            # fields[options['Train hausdorff']], fields[options['Val hausdorff']],
+            fields[options['Train hausdorff']] + ' (/100)', fields[options['Val hausdorff']] + ' (/100)', 
+            fields[options['Train ce loss']], fields[options['Val ce loss']],
+            fields[options['Train iou loss']], fields[options['Val iou loss']] 
+            ],      
             
             'Epochs', 'Scores', 'Training results', 
         )

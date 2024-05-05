@@ -1,5 +1,5 @@
 base_lr: 0.01
-batch_size: 6
+batch_size: 24
 dataset: VHSCDD
 early_stopping: -1
 epochs: 600
@@ -13,9 +13,9 @@ milestones: 1,2
 min_lr: 1.0e-05
 momentum: 0.9
 n_gpu: 1
-name: VHSCDD_RotCAtt_TransUNet_plusplus_bs6_ps16_epo600_hw512_ly4
+name: VHSCDD_SwinUNet_Attention_bs24_ps16_epo600_hw256
 nesterov: false
-network: RotCAtt_TransUNet_plusplus
+network: SwinUNet_Attention
 num_classes: 12
 num_workers: 3
 optimizer: SGD

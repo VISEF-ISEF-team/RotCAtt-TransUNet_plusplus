@@ -11,3 +11,5 @@ hausdorff
 nibabel
 numba
 scikit-image
+ipywidgets
+opencv-python

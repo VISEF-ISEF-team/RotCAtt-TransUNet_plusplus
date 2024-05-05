@@ -13,7 +13,7 @@ milestones: 1,2
 min_lr: 1.0e-05
 momentum: 0.9
 n_gpu: 1
-name: VHSCDD_RotCAtt_TransUNet_plusplus_bs6_ps16_epo600_hw512_ly4
+name: VHSCDD_UNet_bs6_ps16_epo600_hw512
 nesterov: false
 network: RotCAtt_TransUNet_plusplus
 num_classes: 12

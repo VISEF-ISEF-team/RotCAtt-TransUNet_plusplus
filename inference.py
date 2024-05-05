@@ -12,7 +12,6 @@ import torch
 import torch.nn.functional as F
 from skimage.transform import resize as skires
 from metrics import Dice, IOU, HD
-from torch.nn.modules.loss import CrossEntropyLoss
 
 
 class Inference:
@@ -22,19 +21,20 @@ class Inference:
         self.name = config.name
         self.num_classes = config.num_classes
         self.dataset = config.dataset
-        if self.dataset == 'VHSCDD': self.dataset += f'_{self.img_size}'
+        if self.dataset == 'VHSCDD': self.dataset += f'_{config.img_size}'
         self.batch_size = config.batch_size
         self.num_heads = 4
         self.id = id
         self.image_path = f'data/{self.dataset}/test_images/{id:04d}.nii.gz'
         self.label_path = f'data/{self.dataset}/test_labels/{id:04d}.nii.gz'
-        self.pred_path = f'data/{self.dataset}/test_pred/{id:04d}.nii.gz'
-        self.infer_log_file = f'outputs/{self.config.network}/{config.name}/inference_log.csv'
-        self.dice_class_file = f'outputs/{self.config.network}/{config.name}/infer_dice_class.csv'
-        self.iou_class_file = f'outputs/{self.config.network}/{config.name}/infer_iou_class.csv'
+        self.pred_path = f'data/{self.dataset}/test_pred/{id:04d}_{self.network}.nii.gz'
+        self.infer_log_file = f'outputs/{self.network}/{config.name}/inference_log.csv'
+        self.dice_class_file = f'outputs/{self.network}/{config.name}/infer_dice_class.csv'
+        self.iou_class_file = f'outputs/{self.network}/{config.name}/infer_iou_class.csv'
         self.vis_path = f'outputs/{self.network}/{self.name}/test/{id}/'
         self.index_slice = [30, 37, 70, 82, 110, 145]
         self.head_1, self.head_2, self.head_3, self.head_4 = [], [], [], []
+        self.inference_image = False
         
         self.a_weights = {
             'size_1': {
@@ -65,8 +65,8 @@ class Inference:
         
         
     def volume_convert(self):
-        image_paths = glob(f'data/{self.dataset}/images/*.npy')[960:960+192]
-        label_paths = glob(f'data/{self.dataset}/labels/*.npy')[960:960+192]
+        image_paths = glob(f'data/{self.dataset}/images/{self.id:04d}_*.npy')
+        label_paths = glob(f'data/{self.dataset}/labels/{self.id:04d}_*.npy')
         image_vol = []
         label_vol = []
 
@@ -109,29 +109,30 @@ class Inference:
         results = []
         start_t = time()
         
-        start = 30
-        end = 31    # end = steps
+        start = 0
+        end = steps    # end = steps
         pbar = tqdm(total=start-end)
         
-        if not os.path.exists(self.vis_path): os.mkdir(self.vis_path)
+        # if not os.path.exists(self.vis_path): os.mkdir(self.vis_path)
         with torch.no_grad():
             for i in range(segment_size*start, segment_size*end, segment_size):
                 input = image[i:i+segment_size, :, :].unsqueeze(1).cuda()
-                logits, a_weights, r_weights, c_weights = model(input)  
+                if self.network == 'RotCAtt_TrasnUNet_plusplus': logits, a_weights, r_weights, c_weights = model(input)  
+                else: logits = model(input)
                 logits = F.softmax(logits, dim=1)
 
-                self.save_vis(a_weights, r_weights, c_weights)
-
+                if self.network =='RotCAtt_TransUNet_plusplus': self.save_vis(a_weights, r_weights, c_weights)
                 _, pred = torch.max(logits, dim=1) 
                 results.append(pred)
                 pbar.update(1)
-                
-            for s in range(len(a_weights)):
-                instance = self.c_weights[f'size_{s+1}']
-                save_vol(np.array(instance), 'images', self.vis_path + f'c_size_{s+1}.nii.gz')
-                for h in range(self.num_heads):
-                    instance = self.a_weights[f'size_{s+1}'][f'head_{h+1}']
-                    save_vol(np.array(instance), 'images', self.vis_path + f'a_size_{s+1}_head_{h+1}.nii.gz')    
+            
+            if self.network == 'RotCAtt_TrasnUNet_plusplus':
+                for s in range(len(a_weights)):
+                    instance = self.c_weights[f'size_{s+1}']
+                    save_vol(np.array(instance), 'images', self.vis_path + f'c_size_{s+1}.nii.gz')
+                    for h in range(self.num_heads):
+                        instance = self.a_weights[f'size_{s+1}'][f'head_{h+1}']
+                        save_vol(np.array(instance), 'images', self.vis_path + f'a_size_{s+1}_head_{h+1}.nii.gz')    
             
             
         end_t = time()
@@ -158,17 +159,18 @@ class Inference:
         label = sitk.GetArrayFromImage(sitk.ReadImage(self.label_path))
         pred = sitk.GetArrayFromImage(sitk.ReadImage(self.pred_path))
         
-        for index in self.index_slice:
-            if index > image.shape[0]: continue
-            self.visualize(image[index], f'{self.viz_file}/images/{self.id:04d}_{index+1:04d}.png')
-            self.visualize(label[index], f'{self.viz_file}/labels/{self.id:04d}_{index+1:04d}.png', cmap='magma')
-            self.visualize(pred[index],  f'{self.viz_file}/preds/{self.id:04d}_{index+1:04d}.png', cmap='magma')
+        if self.inference_images:
+            for index in self.index_slice:
+                if index > image.shape[0]: continue
+                self.visualize(image[index], f'{self.viz_file}/images/{self.id:04d}_{index+1:04d}.png')
+                self.visualize(label[index], f'{self.viz_file}/labels/{self.id:04d}_{index+1:04d}.png', cmap='magma')
+                self.visualize(pred[index],  f'{self.viz_file}/preds/{self.id:04d}_{index+1:04d}.png', cmap='magma')
             
         encoded_label = torch.tensor(self.encoding(label))
         encoded_pred = torch.tensor(self.encoding(pred))
         
-        dice = Dice(num_classes=self.num_classes, ignore_index=[], softmax=False)
-        iou = IOU(num_classes=self.num_classes, ignore_index=[])
+        dice = Dice(num_classes=self.num_classes, ignore_index=[0], softmax=False)
+        iou = IOU(num_classes=self.num_classes, ignore_index=[0])
         hd = HD()
         
         dice_score, _, cls_dice_score, _ = dice(encoded_pred, encoded_label)
@@ -185,7 +187,8 @@ class Inference:
     
 if __name__ == '__main__':
     config = parse_args()
-    infer = Inference(config, 1)
+    infer = Inference(config, 6)
+    # infer.volume_convert()
     infer.prediction()
-    # infer.metrics()
+    infer.metrics()
     
