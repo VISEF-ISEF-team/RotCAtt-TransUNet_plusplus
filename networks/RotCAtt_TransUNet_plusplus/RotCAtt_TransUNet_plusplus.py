@@ -15,6 +15,7 @@ class RotCAtt_TransUNet_plusplus(nn.Module):
         super().__init__()
         self.config = config
         self.vis = config.vis
+        self.vis = True
         self.dense = Dense(config)
         self.linear_embedding = LinearEmbedding(config)
         self.transformer = Transformer(config)
@@ -25,9 +26,9 @@ class RotCAtt_TransUNet_plusplus(nn.Module):
         
     def forward(self, x):
         x1, x2, x3, x4 = self.dense(x)
-        emb1, emb2, emb3 = self.linear_embedding(x1, x2, x3)
-        enc1, enc2, enc3, a1_weights, a2_weights, a3_weights, c1_weights, c2_weights, c3_weights = self.transformer(emb1, emb2, emb3)
-        r1, r2, r3 = self.rotatory_attention(emb1, emb2, emb3)
+        z1, z2, z3 = self.linear_embedding(x1, x2, x3)
+        e1, e2, e3, a1_weights, a2_weights, a3_weights, c1_weights, c2_weights, c3_weights = self.transformer(z1, z2, z3)
+        r1, r2, r3 = self.rotatory_attention(z1, z2, z3)
         
         att_weights = []
         rot_weights = []
@@ -37,9 +38,9 @@ class RotCAtt_TransUNet_plusplus(nn.Module):
             context_weights = [c1_weights, c2_weights, c3_weights]
 
         # combine both  intra-slice and inter-slice information
-        f1 = enc1 + r1
-        f2 = enc2 + r2
-        f3 = enc3 + r3
+        f1 = e1 + r1
+        f2 = e2 + r2
+        f3 = e3 + r3
         
         o1, o2, o3 = self.reconstruct(f1, f2, f3)
         y = self.decoder(o1, o2, o3, x4)
