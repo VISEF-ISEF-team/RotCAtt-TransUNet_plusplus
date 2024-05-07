@@ -17,7 +17,7 @@ from metrics import Dice, IOU, HD
 
 # Network 1: RotCAtt_TransUNet_plusplus
 from networks.RotCAtt_TransUNet_plusplus.RotCAtt_TransUNet_plusplus import RotCAtt_TransUNet_plusplus
-from networks.RotCAtt_TransUNet_plusplus.config import get_config
+from networks.RotCAtt_TransUNet_plusplus.config import get_config as rot_config
 
 # Network 2: TransUNet
 from networks.TransUNet.TransUNet import TransUNet
@@ -39,12 +39,12 @@ from networks.UNet_Attention.UNet_Attenttion import UNet_Attention
 from networks.UNet_plusplus_Attention.UNet_plusplus_Attention import UNet_plusplus_Attention
 
 # Network 8: SwinUnet
-from networks.SwinUnet.SwinUNet import SwinUNet
+from networks.SwinUNet.SwinUNet import SwinUNet
 from networks.SwinUNet.config import sample_config as swin_config
 
 # Network 9: SwinUNet Attention
 from networks.SwinUNet_Attention.SwinUNet_Attention import SwinUNet_Attention
-from networks.SwinUNet_Attention.configs import swin_attention_unet as swin_unet_att_config
+from networks.SwinUNet_Attention.SwinUNet_Attention import get_swin_unet_attention_configs
 
 
 def parse_args():     
@@ -158,7 +158,7 @@ def load_pretrained_model(model_path):
 
 def load_network(config):
     if config.network == 'RotCAtt_TransUNet_plusplus':
-        model_config = get_config()
+        model_config = rot_config()
         model_config.img_size = config.img_size
         model_config.num_classes = config.num_classes
         model = RotCAtt_TransUNet_plusplus(config=model_config).cuda()
@@ -187,10 +187,10 @@ def load_network(config):
         
     elif config.network == 'SwinUNet':
         model_config = swin_config()
-        model = SwinUNet(config=model_config, img_size=224, num_classes=config.DATA.NUM_CLASSES).cuda()
+        model = SwinUNet(config=model_config, img_size=256, num_classes=config.DATA.NUM_CLASSES).cuda()
         
     elif config.network == 'SwinUNet_Attention':
-        model_config = swin_unet_att_config.get_swin_unet_attention_configs().to_dict()
+        model_config = get_swin_unet_attention_configs()
         model = SwinUNet_Attention(model_config, num_classes=config.num_classes).cuda()
             
     return model

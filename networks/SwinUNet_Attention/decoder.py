@@ -3,9 +3,9 @@ import torch.nn as nn
 import torch.utils.checkpoint as checkpoint
 from einops import rearrange
 from timm.models.layers import DropPath, to_2tuple, trunc_normal_
-from embedding import PatchEmbed
-from  swin_block import SwinTransformerBlock 
-from  skipconnection.crossvit import CrossTransformer
+from .embedding import PatchEmbed
+from  .swin_block import SwinTransformerBlock 
+from  .skipconnection.crossvit import CrossTransformer
 import math
 import copy
 
@@ -139,8 +139,8 @@ class Decoder(nn.Module):
         self.num_features   = int(embed_dim * 2 ** (self.num_layers - 1))
         self.embed_dim      = embed_dim
         num_patches         = patch_embed.num_patches
-        pretrained_dict     = torch.load('./pretrained_ckpt/swin_tiny_patch4_window7_224.pth', map_location='cuda')['model']
-        full_dict           = copy.deepcopy(pretrained_dict)     
+        # pretrained_dict     = torch.load('./pretrained_ckpt/swin_tiny_patch4_window7_224.pth', map_location='cuda')['model']
+        # full_dict           = copy.deepcopy(pretrained_dict)     
        
         # build  cross contextual attention module
         if self.mode in["cross_contextual_attention"] and self.isxvit=='1':

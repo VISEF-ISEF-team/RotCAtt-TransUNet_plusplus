@@ -6,7 +6,7 @@ def get_config():
     # Input
     config.num_classes = 12
     config.in_channels = 1
-    config.img_size    = 512
+    config.img_size    = 256
     config.p           = [16, 8, 4]
     
     # Dense
@@ -20,7 +20,7 @@ def get_config():
     
     # Transformer
     config.num_heads = 4
-    config.num_layers = 9
+    config.num_layers = 4
     config.mlp_ratio = 4
     config.dropout_rate = 0.1
     

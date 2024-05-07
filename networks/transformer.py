@@ -163,4 +163,4 @@ class Transformer(nn.Module):
         e2 = self.encoder_norm2(z2) 
         e3 = self.encoder_norm3(z3) 
         
-        return e1, e2, e3, z1_list, z2_list, z3_list, a1_weights, a2_weights, a3_weights, c1_weights, c2_weights, c3_weights
+        return e1, e2, e3, a1_weights, a2_weights, a3_weights

@@ -7,8 +7,8 @@ import torch.nn as nn
 import torch.utils.checkpoint as checkpoint
 from einops import rearrange
 from timm.models.layers import DropPath, to_2tuple, trunc_normal_
-from embedding import PatchEmbed
-from swin_block import SwinTransformerBlock 
+from .embedding import PatchEmbed
+from .swin_block import SwinTransformerBlock 
 
 class BasicLayer(nn.Module):
     """ A basic Swin Transformer layer for one stage.
